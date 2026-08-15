@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Network Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111a14;
+            --bg-card: #111a14;
+            --border-color: #1a2a1a;
+            --text-primary: #d0f0d0;
+            --text-secondary: #6f9f6f;
+            --text-muted: #3a5a3a;
+            --sidebar-bg: #0d140d;
+            --sidebar-border: #1a2a1a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-orange: #f39c12;
+            --glow: rgba(46, 204, 113, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar-bg);
+            padding: 25px 0;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 0 20px 30px 20px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .sidebar .logo span { color: var(--accent-green); }
+        .sidebar .logo .sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            display: block;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 22px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+            background: var(--glow);
+            color: var(--text-primary);
+            border-left-color: var(--accent-green);
+        }
+        .sidebar .nav-item .icon { margin-right: 14px; font-size: 18px; width: 24px; text-align: center; }
+        .sidebar .nav-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 15px 20px;
+        }
+        .sidebar .nav-item.logout { color: var(--accent-red); }
+        .sidebar .nav-item.logout:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-left-color: var(--accent-red);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 30px 30px 30px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at top, var(--bg-secondary), var(--bg-primary));
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .top-header h1 { color: var(--text-primary); font-size: 24px; font-weight: 600; }
+        .top-header h1 small { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 10px; }
+        .top-header .user-info { display: flex; align-items: center; gap: 16px; }
+        .top-header .user-info .user-name { color: var(--text-secondary); }
+        .top-header .user-info .user-name strong { color: var(--text-primary); }
+        .top-header .user-info .logout-btn { color: var(--accent-red); text-decoration: none; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            padding: 18px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .stat-card .number { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .stat-card .number.green { color: var(--accent-green); }
+        .stat-card .number.orange { color: var(--accent-orange); }
+        .stat-card .number.red { color: var(--accent-red); }
+        .stat-card .number.blue { color: #3498db; }
+
+        .chart-card {
+            background: var(--bg-card);
+            padding: 18px 20px 16px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        .chart-card .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .chart-card .chart-title .badge {
+            font-size: 10px;
+            font-weight: 400;
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            padding: 2px 10px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        .chart-card .chart-container { position: relative; height: 250px; }
+
+        .refresh-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 0 4px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            🌐 Network<span>Monitor</span>
+            <span class="sub">REAL-TIME DASHBOARD</span>
+        </div>
+        <a class="nav-item" href="/"><span class="icon">📊</span> Dashboard</a>
+        <a class="nav-item" href="/devices"><span class="icon">📡</span> Devices</a>
+        <a class="nav-item" href="/alerts"><span class="icon">🔔</span> Alerts</a>
+        <a class="nav-item active" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <div class="nav-divider"></div>
+        <a class="nav-item" href="/settings"><span class="icon">⚙️</span> Settings</a>
+        <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
+    </div>
+
+    <div class="main-content">
+
+        <div class="top-header">
+            <h1>📈 Analytics <small>performance insights</small></h1>
+            <div class="user-info">
+                <span class="user-name">👤 <strong>Admin</strong></span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="number" id="totalDevices">0</div>
+                <div class="label">Total Devices</div>
+            </div>
+            <div class="stat-card">
+                <div class="number green" id="onlineDevices">0</div>
+                <div class="label">Online</div>
+            </div>
+            <div class="stat-card">
+                <div class="number red" id="offlineDevices">0</div>
+                <div class="label">Offline</div>
+            </div>
+            <div class="stat-card">
+                <div class="number orange" id="avgLatency">0ms</div>
+                <div class="label">Avg Latency</div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-title">📊 Latency Trend <span class="badge">last 20</span></div>
+            <div class="chart-container">
+                <canvas id="analyticsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="refresh-footer">
+            🔄 Data refreshes automatically · Last updated: <span id="lastRefresh">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('analyticsChart').getContext('2d');
+        const analyticsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: [],
+                    borderColor: '#2ecc71',
+                    backgroundColor: 'rgba(46,204,113,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#6f9f6f', font: { size: 11 } }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(46,204,113,0.05)' },
+                        ticks: { color: '#3a5a3a' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#3a5a3a', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+
+        async function fetchAnalytics() {
+            try {
+                const [statusRes, devicesRes] = await Promise.all([
+                    fetch('/api/status'),
+                    fetch('/api/devices')
+                ]);
+                const statusData = await statusRes.json();
+                const devicesData = await devicesRes.json();
+
+                document.getElementById('totalDevices').textContent = devicesData.length || 0;
+                let online = 0, offline = 0, totalLat = 0, latCount = 0;
+                statusData.forEach(d => {
+                    if (d.status === 'success') { online++; totalLat += d.latency || 0; latCount++; }
+                    else { offline++; }
+                });
+                document.getElementById('onlineDevices').textContent = online;
+                document.getElementById('offlineDevices').textContent = offline;
+                const avg = latCount > 0 ? Math.round(totalLat / latCount) : 0;
+                document.getElementById('avgLatency').textContent = avg > 0 ? avg + 'ms' : '—';
+
+                const pingRes = await fetch('/api/ping-data');
+                const pingData = await pingRes.json();
+                if (pingData && pingData.length > 0) {
+                    const rev = pingData.reverse();
+                    analyticsChart.data.labels = rev.map(d => new Date(d.timestamp).toLocaleTimeString());
+                    analyticsChart.data.datasets[0].data = rev.map(d => d.latency);
+                    analyticsChart.update();
+                }
+            } catch (e) { console.error('Analytics error:', e); }
+        }
+
+        function refreshAll() {
+            document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+            fetchAnalytics();
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 10000);
+    </script>
+</body>
+</html>

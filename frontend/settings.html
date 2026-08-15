@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Network Monitor</title>
+    <style>
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111a14;
+            --bg-card: #111a14;
+            --border-color: #1a2a1a;
+            --text-primary: #d0f0d0;
+            --text-secondary: #6f9f6f;
+            --text-muted: #3a5a3a;
+            --sidebar-bg: #0d140d;
+            --sidebar-border: #1a2a1a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --glow: rgba(46, 204, 113, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar-bg);
+            padding: 25px 0;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 0 20px 30px 20px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .sidebar .logo span { color: var(--accent-green); }
+        .sidebar .logo .sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            display: block;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 22px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+            background: var(--glow);
+            color: var(--text-primary);
+            border-left-color: var(--accent-green);
+        }
+        .sidebar .nav-item .icon { margin-right: 14px; font-size: 18px; width: 24px; text-align: center; }
+        .sidebar .nav-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 15px 20px;
+        }
+        .sidebar .nav-item.logout { color: var(--accent-red); }
+        .sidebar .nav-item.logout:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-left-color: var(--accent-red);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 30px 30px 30px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at top, var(--bg-secondary), var(--bg-primary));
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .top-header h1 { color: var(--text-primary); font-size: 24px; font-weight: 600; }
+        .top-header h1 small { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 10px; }
+        .top-header .user-info { display: flex; align-items: center; gap: 16px; }
+        .top-header .user-info .user-name { color: var(--text-secondary); }
+        .top-header .user-info .user-name strong { color: var(--text-primary); }
+        .top-header .user-info .logout-btn { color: var(--accent-red); text-decoration: none; }
+
+        .settings-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            max-width: 700px;
+        }
+        .settings-card h2 {
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(26, 42, 26, 0.4);
+        }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-item .label { color: var(--text-secondary); }
+        .setting-item .value { color: var(--text-muted); font-size: 13px; }
+
+        .btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        .btn:hover { border-color: var(--accent-green); color: var(--text-primary); }
+        .btn.danger { border-color: var(--accent-red); color: var(--accent-red); }
+        .btn.danger:hover { background: rgba(231, 76, 60, 0.1); }
+
+        .refresh-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 0 4px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            🌐 Network<span>Monitor</span>
+            <span class="sub">REAL-TIME DASHBOARD</span>
+        </div>
+        <a class="nav-item" href="/"><span class="icon">📊</span> Dashboard</a>
+        <a class="nav-item" href="/devices"><span class="icon">📡</span> Devices</a>
+        <a class="nav-item" href="/alerts"><span class="icon">🔔</span> Alerts</a>
+        <a class="nav-item" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <div class="nav-divider"></div>
+        <a class="nav-item active" href="/settings"><span class="icon">⚙️</span> Settings</a>
+        <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
+    </div>
+
+    <div class="main-content">
+
+        <div class="top-header">
+            <h1>⚙️ Settings <small>system configuration</small></h1>
+            <div class="user-info">
+                <span class="user-name">👤 <strong>Admin</strong></span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h2>🔧 General Settings</h2>
+
+            <div class="setting-item">
+                <span class="label">🌐 System Name</span>
+                <span class="value">Network Monitor v1.0</span>
+            </div>
+
+            <div class="setting-item">
+                <span class="label">⏱️ Refresh Interval</span>
+                <span class="value">10 seconds</span>
+            </div>
+
+            <div class="setting-item">
+                <span class="label">📡 Monitored Devices</span>
+                <span class="value" id="deviceCount">0</span>
+            </div>
+
+            <div class="setting-item">
+                <span class="label">📊 Database</span>
+                <span class="value">SQLite (data/network_monitor.db)</span>
+            </div>
+
+            <div class="setting-item">
+                <span class="label">📧 Email Alerts</span>
+                <span class="value">Configured</span>
+            </div>
+
+            <div class="setting-item">
+                <span class="label">👤 Logged in as</span>
+                <span class="value">Admin</span>
+            </div>
+
+            <div class="setting-item" style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <span class="label">🔐 Security</span>
+                <div>
+                    <button class="btn danger" onclick="if(confirm('Logout?')) window.location.href='/logout'">Logout</button>
+                </div>
+            </div>
+
+            <div class="setting-item" style="padding-top: 16px;">
+                <span class="label">🗑️ Data</span>
+                <div>
+                    <button class="btn danger" onclick="if(confirm('Clear all data? This cannot be undone!')) alert('Data cleared!')">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="refresh-footer">
+            🔄 Last updated: <span id="lastRefresh">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        async function fetchDeviceCount() {
+            try {
+                const res = await fetch('/api/devices');
+                const data = await res.json();
+                document.getElementById('deviceCount').textContent = data.length;
+            } catch (e) { console.error('Error fetching devices:', e); }
+        }
+
+        function refreshAll() {
+            document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+            fetchDeviceCount();
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+</html>

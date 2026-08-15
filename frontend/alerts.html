@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alerts - Network Monitor</title>
+    <style>
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111a14;
+            --bg-card: #111a14;
+            --border-color: #1a2a1a;
+            --text-primary: #d0f0d0;
+            --text-secondary: #6f9f6f;
+            --text-muted: #3a5a3a;
+            --sidebar-bg: #0d140d;
+            --sidebar-border: #1a2a1a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-orange: #f39c12;
+            --glow: rgba(46, 204, 113, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar-bg);
+            padding: 25px 0;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 0 20px 30px 20px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .sidebar .logo span { color: var(--accent-green); }
+        .sidebar .logo .sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            display: block;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 22px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+            background: var(--glow);
+            color: var(--text-primary);
+            border-left-color: var(--accent-green);
+        }
+        .sidebar .nav-item .icon { margin-right: 14px; font-size: 18px; width: 24px; text-align: center; }
+        .sidebar .nav-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 15px 20px;
+        }
+        .sidebar .nav-item.logout { color: var(--accent-red); }
+        .sidebar .nav-item.logout:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-left-color: var(--accent-red);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 30px 30px 30px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at top, var(--bg-secondary), var(--bg-primary));
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .top-header h1 { color: var(--text-primary); font-size: 24px; font-weight: 600; }
+        .top-header h1 small { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 10px; }
+        .top-header .user-info { display: flex; align-items: center; gap: 16px; }
+        .top-header .user-info .user-name { color: var(--text-secondary); }
+        .top-header .user-info .user-name strong { color: var(--text-primary); }
+        .top-header .user-info .logout-btn { color: var(--accent-red); text-decoration: none; }
+
+        .alerts-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .alert-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 18px 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-orange);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .alert-card.critical { border-left-color: var(--accent-red); }
+        .alert-card.warning { border-left-color: var(--accent-orange); }
+        .alert-card.info { border-left-color: var(--accent-green); }
+
+        .alert-card .alert-info { flex: 1; }
+        .alert-card .alert-info .title { font-weight: 600; color: var(--text-primary); }
+        .alert-card .alert-info .desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+        .alert-card .alert-info .time { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .alert-card .alert-badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .alert-badge.critical { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
+        .alert-badge.warning { background: rgba(243, 156, 18, 0.15); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.3); }
+        .alert-badge.info { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
+
+        .no-alerts {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+        .no-alerts .icon { font-size: 48px; margin-bottom: 10px; }
+
+        .refresh-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 0 4px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            🌐 Network<span>Monitor</span>
+            <span class="sub">REAL-TIME DASHBOARD</span>
+        </div>
+        <a class="nav-item" href="/"><span class="icon">📊</span> Dashboard</a>
+        <a class="nav-item" href="/devices"><span class="icon">📡</span> Devices</a>
+        <a class="nav-item active" href="/alerts"><span class="icon">🔔</span> Alerts</a>
+        <a class="nav-item" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <div class="nav-divider"></div>
+        <a class="nav-item" href="/settings"><span class="icon">⚙️</span> Settings</a>
+        <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
+    </div>
+
+    <div class="main-content">
+
+        <div class="top-header">
+            <h1>🔔 Alerts <small>system notifications</small></h1>
+            <div class="user-info">
+                <span class="user-name">👤 <strong>Admin</strong></span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="alerts-container" id="alertsContainer">
+            <div class="no-alerts">
+                <div class="icon">🔔</div>
+                <p>Loading alerts...</p>
+            </div>
+        </div>
+
+        <div class="refresh-footer">
+            🔄 Data refreshes automatically · Last updated: <span id="lastRefresh">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAlerts() {
+            try {
+                const res = await fetch('/api/alerts');
+                const data = await res.json();
+                const container = document.getElementById('alertsContainer');
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-alerts">
+                            <div class="icon">✅</div>
+                            <p style="color: #2ecc71;">No alerts! Everything is running smoothly.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                data.forEach(alert => {
+                    const severity = alert.severity || 'info';
+                    const severityClass = severity.toLowerCase();
+                    const time = new Date(alert.created_at).toLocaleString();
+                    html += `
+                        <div class="alert-card ${severityClass}">
+                            <div class="alert-info">
+                                <div class="title">${alert.message || 'Alert'}</div>
+                                <div class="desc">Device: ${alert.device_name || 'Unknown'}</div>
+                                <div class="time">${time}</div>
+                            </div>
+                            <span class="alert-badge ${severityClass}">${severity.toUpperCase()}</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                console.error('Alerts error:', e);
+                document.getElementById('alertsContainer').innerHTML = `
+                    <div class="no-alerts">
+                        <p style="color: var(--accent-red);">❌ Error loading alerts</p>
+                    </div>
+                `;
+            }
+        }
+
+        function refreshAll() {
+            document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+            fetchAlerts();
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 10000);
+    </script>
+</body>
+</html>

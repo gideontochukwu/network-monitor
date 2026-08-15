@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: network-monitor
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+    plan: free

@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ============================================
+                   CSS VARIABLES - THEME SWITCHING
+                ============================================ */
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111a14;
+            --bg-card: #111a14;
+            --border-color: #1a2a1a;
+            --text-primary: #d0f0d0;
+            --text-secondary: #6f9f6f;
+            --text-muted: #3a5a3a;
+            --sidebar-bg: #0d140d;
+            --sidebar-border: #1a2a1a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --accent-green: #2ecc71;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #9b59b6;
+            --accent-blue: #00b4d8;
+            --accent-orange: #f39c12;
+            --accent-red: #e74c3c;
+            --glow: rgba(46, 204, 113, 0.08);
+        }
+
+        /* Light theme overrides */
+        body.light {
+            --bg-primary: #f0f4f0;
+            --bg-secondary: #e8ede8;
+            --bg-card: #ffffff;
+            --border-color: #c8d0c8;
+            --text-primary: #1a2a1a;
+            --text-secondary: #3a5a3a;
+            --text-muted: #6a8a6a;
+            --sidebar-bg: #1a2a1a;
+            --sidebar-border: #2a3a2a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --glow: rgba(46, 204, 113, 0.05);
+        }
+
+        /* ============================================
+                   RESET & GLOBAL
+                ============================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        /* ============================================
+                   SIDEBAR
+                ============================================ */
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar-bg);
+            color: var(--text-secondary);
+            padding: 25px 0;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border);
+            box-shadow: var(--shadow);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 0 20px 30px 20px;
+            text-align: center;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+        .sidebar .logo span { color: var(--accent-green); }
+        .sidebar .logo .sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            display: block;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 22px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+            background: var(--glow);
+            color: var(--text-primary);
+            border-left-color: var(--accent-green);
+        }
+        .sidebar .nav-item .icon { margin-right: 14px; font-size: 18px; width: 24px; text-align: center; }
+        .sidebar .nav-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 15px 20px;
+        }
+        .sidebar .nav-item.logout { color: var(--accent-red); }
+        .sidebar .nav-item.logout:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-left-color: var(--accent-red);
+        }
+
+        /* ============================================
+                   MAIN CONTENT
+                ============================================ */
+        .main-content {
+            flex: 1;
+            padding: 20px 30px 30px 30px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at top, var(--bg-secondary), var(--bg-primary));
+            transition: background 0.3s;
+        }
+
+        /* ============================================
+                   TOP HEADER
+                ============================================ */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .top-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+        .top-header h1 small {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-left: 10px;
+        }
+        .top-header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .top-header .user-info .status {
+            background: rgba(46, 204, 113, 0.12);
+            color: var(--accent-green);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid rgba(46, 204, 113, 0.2);
+        }
+        .top-header .user-info .user-name { color: var(--text-secondary); font-size: 14px; }
+        .top-header .user-info .user-name strong { color: var(--text-primary); }
+        .top-header .user-info .logout-btn {
+            color: var(--accent-red);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .top-header .user-info .logout-btn:hover { color: var(--accent-red); text-decoration: underline; }
+
+        /* ---- Theme Toggle ---- */
+        .theme-toggle {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 4px 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .theme-toggle:hover { border-color: var(--accent-green); }
+        .theme-toggle .icon { font-size: 16px; }
+
+        /* ============================================
+                   SUMMARY CARDS
+                ============================================ */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 18px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, background 0.3s, border-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, var(--accent-green), transparent);
+            opacity: 0.3;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-green);
+            box-shadow: 0 8px 30px rgba(46, 204, 113, 0.08);
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: var(--text-primary);
+        }
+        .stat-card .value.green { color: var(--accent-green); }
+        .stat-card .value.blue { color: var(--accent-blue); }
+        .stat-card .value.orange { color: var(--accent-orange); }
+        .stat-card .value.purple { color: var(--accent-purple); }
+        .stat-card .value.cyan { color: var(--accent-cyan); }
+        .stat-card .value.red { color: var(--accent-red); }
+        .stat-card .value.mint { color: #a8e6cf; }
+
+        .stat-card .sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        /* ---- Health Status ---- */
+        .health-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .health-status .badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.good { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
+        .badge.warning { background: rgba(243, 156, 18, 0.15); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.3); }
+        .badge.critical { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
+
+        /* ============================================
+                   CHART GRID
+                ============================================ */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+        .chart-card {
+            background: var(--bg-card);
+            padding: 18px 20px 16px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+        .chart-card.full-width { grid-column: 1 / -1; }
+        .chart-card .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            letter-spacing: 0.3px;
+        }
+        .chart-card .chart-title .badge {
+            font-size: 10px;
+            font-weight: 400;
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            padding: 2px 10px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        .chart-card .chart-container {
+            position: relative;
+            height: 200px;
+        }
+        .chart-card .chart-container.tall { height: 250px; }
+
+        /* ============================================
+                   DEVICE TABLE
+                ============================================ */
+        .device-table-wrapper {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 18px 20px 20px 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+            overflow-x: auto;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .device-table-wrapper .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .device-table-wrapper .section-header h3 { color: var(--text-secondary); font-size: 15px; font-weight: 600; }
+        .device-table-wrapper .section-header .device-count { color: var(--text-muted); font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        tbody tr:hover { background: var(--glow); }
+        .status-badge {
+            padding: 3px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            display: inline-block;
+            letter-spacing: 0.3px;
+        }
+        .status-badge.online { background: rgba(46, 204, 113, 0.12); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); }
+        .status-badge.offline { background: rgba(231, 76, 60, 0.12); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.2); }
+        .status-badge.timeout { background: rgba(243, 156, 18, 0.12); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.2); }
+        .status-badge.failed { background: rgba(231, 76, 60, 0.12); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.2); }
+
+        /* ============================================
+                   ANOMALIES CARD
+                ============================================ */
+        .anomalies-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 18px 20px 20px 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--accent-red);
+            margin-bottom: 25px;
+        }
+        .anomalies-card .section-header h3 { color: var(--text-secondary); font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+        .anomaly-item {
+            background: rgba(231, 76, 60, 0.06);
+            padding: 10px 14px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-red);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .anomaly-item .anomaly-badge { background: var(--accent-red); color: #fff; padding: 2px 12px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+        .no-anomalies { text-align: center; padding: 16px; color: var(--accent-green); font-weight: 500; font-size: 14px; }
+
+        /* ============================================
+                   REFRESH FOOTER
+                ============================================ */
+        .refresh-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 0 4px 0;
+            border-top: 1px solid var(--border-color);
+        }
+        .refresh-footer .time { font-weight: 600; color: var(--text-secondary); }
+
+        /* ============================================
+                   RESPONSIVE
+                ============================================ */
+        @media (max-width: 1024px) {
+            .summary-grid { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { padding: 16px; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+            .top-header { flex-direction: column; align-items: flex-start; }
+        }
+        @media (max-width: 480px) {
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== SIDEBAR ===== -->
+    <div class="sidebar">
+        <div class="logo">
+            🌐 Network<span>Monitor</span>
+            <span class="sub">REAL-TIME DASHBOARD</span>
+        </div>
+        <a class="nav-item active" href="/"><span class="icon">📊</span> Dashboard</a>
+        <a class="nav-item" href="/devices"><span class="icon">📡</span> Devices</a>
+        <a class="nav-item" href="/alerts"><span class="icon">🔔</span> Alerts</a>
+        <a class="nav-item" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <div class="nav-divider"></div>
+        <a class="nav-item" href="/settings"><span class="icon">⚙️</span> Settings</a>
+        <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
+    </div>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="main-content">
+
+        <!-- HEADER -->
+        <div class="top-header">
+            <h1>
+                📊 Dashboard
+                <small>live network overview</small>
+            </h1>
+            <div class="user-info">
+                <span class="status">🟢 Live</span>
+                <span class="user-name">👤 <strong id="userName">Admin</strong></span>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span class="icon" id="themeIcon">🌙</span>
+                </button>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid">
+            <div class="stat-card">
+                <div class="label">📡 Devices</div>
+                <div class="value blue" id="totalDevices">0</div>
+                <div class="sub"><span id="onlineDevices">0</span> online · <span id="offlineDevices">0</span> offline</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">⚡ Latency</div>
+                <div class="value orange" id="avgLatency">0ms</div>
+                <div class="sub">Average response</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">💻 CPU</div>
+                <div class="value green" id="cpuValue">0%</div>
+                <div class="sub">System usage</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">🧠 Memory</div>
+                <div class="value purple" id="memoryValue">0%</div>
+                <div class="sub">RAM usage</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">💾 Disk</div>
+                <div class="value cyan" id="diskValue">0%</div>
+                <div class="sub">Storage usage</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">⏱️ Uptime</div>
+                <div class="value blue" id="uptimeValue">0m</div>
+                <div class="sub">System running</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">📋 Processes</div>
+                <div class="value mint" id="processesValue">0</div>
+                <div class="sub">Running processes</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">❤️ Health</div>
+                <div class="health-status">
+                    <div class="value" id="healthBadge" style="font-size: 20px;">✅</div>
+                    <span class="badge good" id="healthLabel">Good</span>
+                </div>
+                <div class="sub">System status</div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="chart-grid">
+            <div class="chart-card full-width">
+                <div class="chart-title">📊 Ping Latency <span class="badge">last 20</span></div>
+                <div class="chart-container tall">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">💻 CPU Usage <span class="badge">%</span></div>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">🧠 Memory Usage <span class="badge">%</span></div>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">💾 Disk Usage <span class="badge">%</span></div>
+                <div class="chart-container">
+                    <canvas id="diskChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card full-width">
+                <div class="chart-title">📶 Network Traffic <span class="badge">MB</span></div>
+                <div class="chart-container tall">
+                    <canvas id="networkChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEVICE TABLE -->
+        <div class="device-table-wrapper">
+            <div class="section-header">
+                <h3>📡 Device Status</h3>
+                <span class="device-count" id="deviceCount">0 devices</span>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Device</th><th>IP</th><th>Latency</th><th>Bandwidth</th><th>Status</th><th>Last Check</th></tr>
+                </thead>
+                <tbody id="deviceTableBody">
+                    <tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Loading devices...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ANOMALIES -->
+        <div class="anomalies-card">
+            <div class="section-header">
+                <h3>🚨 AI Anomaly Detection</h3>
+            </div>
+            <div id="anomaliesContainer">
+                <div class="no-anomalies">✅ No anomalies detected. Network is healthy.</div>
+            </div>
+        </div>
+
+        <!-- REFRESH -->
+        <div class="refresh-footer">
+            🔄 Data refreshes automatically · Last updated: <span class="time" id="lastRefresh">--:--:--</span>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ===== JAVASCRIPT ===== -->
+    <!-- ============================================ -->
+    <script>
+        // ==========================================
+        // 1. THEME TOGGLE
+        // ==========================================
+        function toggleTheme() {
+            document.body.classList.toggle('light');
+            const icon = document.getElementById('themeIcon');
+            if (document.body.classList.contains('light')) {
+                icon.textContent = '☀️';
+            } else {
+                icon.textContent = '🌙';
+            }
+        }
+
+        // ==========================================
+        // 2. CHART INITIALIZATION
+        // ==========================================
+        const latencyCtx = document.getElementById('latencyChart').getContext('2d');
+        const latencyChart = new Chart(latencyCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Ping (ms)', data: [], borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.05)', fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') || '#3a5a3a', font: { size: 11 } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,212,255,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') } }, x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } } } } }
+        });
+
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        const cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'CPU %', data: [], borderColor: '#2ecc71', backgroundColor: 'rgba(46,204,113,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 11 } } } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(46,204,113,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') } }, x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } } } } }
+        });
+
+        const memCtx = document.getElementById('memoryChart').getContext('2d');
+        const memoryChart = new Chart(memCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Memory %', data: [], borderColor: '#9b59b6', backgroundColor: 'rgba(155,89,182,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 11 } } } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(155,89,182,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') } }, x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } } } } }
+        });
+
+        const diskCtx = document.getElementById('diskChart').getContext('2d');
+        const diskChart = new Chart(diskCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Disk %', data: [], borderColor: '#00b4d8', backgroundColor: 'rgba(0,180,216,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 11 } } } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,180,216,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') } }, x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } } } } }
+        });
+
+        const netCtx = document.getElementById('networkChart').getContext('2d');
+        const networkChart = new Chart(netCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [
+                { label: 'Sent (MB)', data: [], borderColor: '#f39c12', backgroundColor: 'rgba(243,156,18,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 },
+                { label: 'Recv (MB)', data: [], borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.06)', fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2 }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 11 } } } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(46,204,113,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted') } }, x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted'), font: { size: 10 } } } } }
+        });
+
+        // ==========================================
+        // 3. FETCH FUNCTIONS
+        // ==========================================
+        async function fetchPingData() {
+            try {
+                const res = await fetch('/api/ping-data');
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    const rev = data.reverse();
+                    latencyChart.data.labels = rev.map(d => new Date(d.timestamp).toLocaleTimeString());
+                    latencyChart.data.datasets[0].data = rev.map(d => d.latency);
+                    latencyChart.update();
+                }
+            } catch (e) { console.error('Ping data error:', e); }
+        }
+
+        async function fetchDevices() {
+            try {
+                const res = await fetch('/api/devices');
+                const data = await res.json();
+                document.getElementById('totalDevices').textContent = data.length;
+                document.getElementById('deviceCount').textContent = data.length + ' devices';
+            } catch (e) { console.error('Devices error:', e); }
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                const tbody = document.getElementById('deviceTableBody');
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No devices found</td></tr>';
+                    return;
+                }
+                let online = 0, offline = 0, totalLat = 0, latCount = 0;
+                let html = '';
+                data.forEach(d => {
+                    if (d.status === 'success') { online++; totalLat += d.latency || 0; latCount++; } else { offline++; }
+                    const cls = d.status === 'success' ? 'online' : d.status === 'timeout' ? 'timeout' : 'failed';
+                    const lat = d.latency !== null ? d.latency + 'ms' : '—';
+                    const bw = d.bandwidth !== undefined ? d.bandwidth + '%' : '—';
+                    const time = new Date(d.timestamp).toLocaleTimeString();
+                    html += `<tr>
+                        <td><strong style="color:var(--text-primary);">${d.device}</strong></td>
+                        <td style="color:var(--text-secondary);">${d.ip || '—'}</td>
+                        <td>${lat}</td>
+                        <td>${bw}</td>
+                        <td><span class="status-badge ${cls}">${d.status}</span></td>
+                        <td style="color:var(--text-muted);font-size:12px;">${time}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+                document.getElementById('onlineDevices').textContent = online;
+                document.getElementById('offlineDevices').textContent = offline;
+                const avg = latCount > 0 ? Math.round(totalLat / latCount) : 0;
+                document.getElementById('avgLatency').textContent = avg > 0 ? avg + 'ms' : '—';
+            } catch (e) { console.error('Status error:', e); }
+        }
+
+        async function fetchSystemMetrics() {
+            try {
+                const res = await fetch('/api/system-metrics');
+                const data = await res.json();
+                if (data) {
+                    document.getElementById('cpuValue').textContent = data.cpu !== undefined ? Math.round(data.cpu) + '%' : '—';
+                    document.getElementById('memoryValue').textContent = data.memory !== undefined ? Math.round(data.memory) + '%' : '—';
+                    document.getElementById('diskValue').textContent = data.disk !== undefined ? Math.round(data.disk) + '%' : '—';
+                    // Uptime
+                    if (data.uptime !== undefined && data.uptime !== null) {
+                        const uptimeSec = data.uptime;
+                        const days = Math.floor(uptimeSec / 86400);
+                        const hours = Math.floor((uptimeSec % 86400) / 3600);
+                        const mins = Math.floor((uptimeSec % 3600) / 60);
+                        let uptimeStr = '';
+                        if (days > 0) uptimeStr += days + 'd ';
+                        if (hours > 0 || days > 0) uptimeStr += hours + 'h ';
+                        uptimeStr += mins + 'm';
+                        document.getElementById('uptimeValue').textContent = uptimeStr;
+                    } else {
+                        document.getElementById('uptimeValue').textContent = '—';
+                    }
+                    // Processes
+                    document.getElementById('processesValue').textContent = data.processes !== undefined && data.processes !== null ? data.processes : '—';
+
+                    // Health Status
+                    const cpu = data.cpu || 0;
+                    const mem = data.memory || 0;
+                    const disk = data.disk || 0;
+                    let health = 'good';
+                    if (cpu > 80 || mem > 85 || disk > 90) health = 'critical';
+                    else if (cpu > 60 || mem > 70 || disk > 75) health = 'warning';
+                    const badge = document.getElementById('healthBadge');
+                    const label = document.getElementById('healthLabel');
+                    if (health === 'good') {
+                        badge.textContent = '✅';
+                        label.textContent = 'Good';
+                        label.className = 'badge good';
+                    } else if (health === 'warning') {
+                        badge.textContent = '⚠️';
+                        label.textContent = 'Warning';
+                        label.className = 'badge warning';
+                    } else {
+                        badge.textContent = '❌';
+                        label.textContent = 'Critical';
+                        label.className = 'badge critical';
+                    }
+
+                    // Update charts
+                    if (data.cpu_history && data.cpu_history.length > 0) {
+                        cpuChart.data.labels = data.cpu_history.map(d => new Date(d.timestamp).toLocaleTimeString());
+                        cpuChart.data.datasets[0].data = data.cpu_history.map(d => d.value);
+                        cpuChart.update();
+                    }
+                    if (data.memory_history && data.memory_history.length > 0) {
+                        memoryChart.data.labels = data.memory_history.map(d => new Date(d.timestamp).toLocaleTimeString());
+                        memoryChart.data.datasets[0].data = data.memory_history.map(d => d.value);
+                        memoryChart.update();
+                    }
+                    if (data.disk_history && data.disk_history.length > 0) {
+                        diskChart.data.labels = data.disk_history.map(d => new Date(d.timestamp).toLocaleTimeString());
+                        diskChart.data.datasets[0].data = data.disk_history.map(d => d.value);
+                        diskChart.update();
+                    }
+                    // Network chart
+                    if (data.net_sent_history && data.net_sent_history.length > 0) {
+                        const labels = data.net_sent_history.map(d => new Date(d.timestamp).toLocaleTimeString());
+                        const sentData = data.net_sent_history.map(d => d.value / (1024*1024));
+                        const recvData = data.net_recv_history ? data.net_recv_history.map(d => d.value / (1024*1024)) : [];
+                        networkChart.data.labels = labels;
+                        networkChart.data.datasets[0].data = sentData;
+                        networkChart.data.datasets[1].data = recvData;
+                        networkChart.update();
+                    }
+                }
+            } catch (e) { console.error('System metrics error:', e); }
+        }
+
+        async function fetchAnomalies() {
+            try {
+                const res = await fetch('/api/anomalies');
+                const data = await res.json();
+                const container = document.getElementById('anomaliesContainer');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="no-anomalies">✅ No anomalies detected. Network is healthy.</div>';
+                    return;
+                }
+                let html = '';
+                data.forEach(a => {
+                    const time = new Date(a.timestamp).toLocaleTimeString();
+                    const device = a.device_name || 'Unknown';
+                    html += `<div class="anomaly-item">
+                        <div>
+                            <strong style="color:var(--accent-red);">🔴 Anomaly</strong>
+                            <strong style="color:var(--text-primary);">${device}</strong>
+                            <span style="color:var(--accent-red);font-weight:bold;">${a.latency}ms</span>
+                            <span style="color:var(--text-muted);font-size:13px;">at ${time}</span>
+                        </div>
+                        <span class="anomaly-badge">UNUSUAL</span>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) { console.error('Anomalies error:', e); }
+        }
+
+        function refreshAll() {
+            const now = new Date();
+            document.getElementById('lastRefresh').textContent = now.toLocaleTimeString();
+            fetchPingData();
+            fetchDevices();
+            fetchStatus();
+            fetchSystemMetrics();
+            fetchAnomalies();
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 10000);
+    </script>
+
+</body>
+</html>
