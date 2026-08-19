@@ -362,6 +362,70 @@ def discover_devices():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/dns-logs')
+def get_dns_logs():
+    """Get recent DNS logs"""
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT domain, timestamp
+        FROM dns_logs
+        ORDER BY timestamp DESC
+        LIMIT 50
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    logs = [{'domain': row[0], 'timestamp': row[1]} for row in rows]
+    return jsonify(logs)
+
+@app.route('/api/dns-stats')
+def get_dns_stats():
+    """Get DNS statistics (most visited domains)"""
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT domain, COUNT(*) as count
+        FROM dns_logs
+        GROUP BY domain
+        ORDER BY count DESC
+        LIMIT 20
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    stats = [{'domain': row[0], 'count': row[1]} for row in rows]
+    return jsonify(stats)
+
+@app.route('/dns')
+def dns_page():
+    """DNS/Applications page"""
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('dns.html')
+
+@app.route('/api/devices', methods=['POST'])
+def add_device():
+    """Add a new device"""
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    name = data.get('name')
+    ip = data.get('ip')
+    
+    if not name or not ip:
+        return jsonify({'error': 'Name and IP are required'}), 400
+    
+    device_id = db.add_device(name, ip)
+    return jsonify({'success': True, 'id': device_id})
+
 # ==================== Main ====================
 
 if __name__ == '__main__':

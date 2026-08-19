@@ -18,7 +18,6 @@
             --shadow: 0 4px 20px rgba(0,0,0,0.5);
             --accent-green: #2ecc71;
             --accent-red: #e74c3c;
-            --accent-orange: #f39c12;
             --glow: rgba(46, 204, 113, 0.08);
         }
 
@@ -117,97 +116,6 @@
         .top-header .user-info .user-name strong { color: var(--text-primary); }
         .top-header .user-info .logout-btn { color: var(--accent-red); text-decoration: none; }
 
-        /* ===== AUTO DISCOVERY SECTION ===== */
-        .discovery-section {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 18px 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow);
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .discovery-section .left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .discovery-section .left .info {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-        .discovery-section .left .info strong {
-            color: var(--text-secondary);
-        }
-
-        .btn-primary {
-            background: var(--accent-green);
-            color: #0a0e0a;
-            border: none;
-            padding: 10px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-primary:hover {
-            background: #27ae60;
-            transform: translateY(-1px);
-        }
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .btn-primary .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #0a0e0a;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 13px;
-        }
-        .btn-secondary:hover {
-            border-color: var(--accent-green);
-            color: var(--text-primary);
-        }
-
-        .status-message {
-            font-size: 13px;
-            padding: 8px 14px;
-            border-radius: 6px;
-            display: inline-block;
-        }
-        .status-message.success { color: var(--accent-green); }
-        .status-message.error { color: var(--accent-red); }
-        .status-message.info { color: var(--accent-orange); }
-
-        /* ===== DEVICE TABLE ===== */
         .device-table-wrapper {
             background: var(--bg-card);
             border-radius: 12px;
@@ -216,20 +124,41 @@
             box-shadow: var(--shadow);
             overflow-x: auto;
         }
-        .device-table-wrapper .table-header {
+
+        .device-table-wrapper .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .device-table-wrapper .table-header h2 {
+        .device-table-wrapper .section-header h3 {
             color: var(--text-secondary);
             font-size: 18px;
         }
-        .device-table-wrapper .table-header .count {
-            color: var(--text-muted);
-            font-size: 13px;
+        .device-table-wrapper .section-header .right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
+
+        .btn-primary {
+            background: var(--accent-green);
+            color: #0a0e0a;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .btn-primary:hover {
+            background: #27ae60;
+            transform: translateY(-1px);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -262,7 +191,6 @@
         }
         .status-badge.online { background: rgba(46, 204, 113, 0.12); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.2); }
         .status-badge.offline { background: rgba(231, 76, 60, 0.12); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.2); }
-        .status-badge.discovered { background: rgba(52, 152, 219, 0.12); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.2); }
 
         .refresh-footer {
             text-align: center;
@@ -272,10 +200,82 @@
             border-top: 1px solid var(--border-color);
             margin-top: 25px;
         }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #111a14;
+            padding: 30px;
+            border-radius: 12px;
+            width: 400px;
+            max-width: 90%;
+            border: 1px solid #1a3a2a;
+        }
+        .modal-content h2 {
+            color: #d0f0d0;
+            margin-bottom: 20px;
+        }
+        .modal-content label {
+            color: #6f9f6f;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            background: #0a0e0a;
+            border: 1px solid #1a3a2a;
+            border-radius: 8px;
+            color: #d0f0d0;
+            margin-bottom: 15px;
+        }
+        .modal-content input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+        .modal-content .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-green);
+            color: #0a0e0a;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .modal-content .btn-submit:hover {
+            background: #27ae60;
+        }
+        .modal-content .btn-cancel {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            background: transparent;
+            color: #6f9f6f;
+            border: 1px solid #1a3a2a;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .modal-content .btn-cancel:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
     </style>
 </head>
 <body>
 
+    <!-- ===== SIDEBAR ===== -->
     <div class="sidebar">
         <div class="logo">
             🌐 Network<span>Monitor</span>
@@ -285,14 +285,15 @@
         <a class="nav-item active" href="/devices"><span class="icon">📡</span> Devices</a>
         <a class="nav-item" href="/alerts"><span class="icon">🔔</span> Alerts</a>
         <a class="nav-item" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <a class="nav-item" href="/dns"><span class="icon">🌐</span> Applications</a>
         <div class="nav-divider"></div>
         <a class="nav-item" href="/settings"><span class="icon">⚙️</span> Settings</a>
         <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
     </div>
 
+    <!-- ===== MAIN CONTENT ===== -->
     <div class="main-content">
 
-        <!-- HEADER -->
         <div class="top-header">
             <h1>📡 Devices <small>manage monitored devices</small></h1>
             <div class="user-info">
@@ -301,41 +302,20 @@
             </div>
         </div>
 
-        <!-- AUTO DISCOVERY SECTION -->
-        <div class="discovery-section">
-            <div class="left">
-                <button class="btn-primary" id="discoverBtn" onclick="startDiscovery()">
-                    🔍 Auto-Discover Devices
-                </button>
-                <span class="info">
-                    Scans your local network and automatically adds new devices
-                </span>
-            </div>
-            <div>
-                <span id="discoverStatus" class="status-message"></span>
-            </div>
-        </div>
-
-        <!-- DEVICE TABLE -->
         <div class="device-table-wrapper">
-            <div class="table-header">
-                <h2>📋 All Monitored Devices</h2>
-                <span class="count" id="deviceCount">0 devices</span>
+            <div class="section-header">
+                <h3>📋 All Monitored Devices</h3>
+                <div class="right">
+                    <button onclick="showAddDevice()" class="btn-primary">➕ Add Device</button>
+                    <span class="device-count" id="deviceCount">0 devices</span>
+                </div>
             </div>
             <table>
                 <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Device</th>
-                        <th>IP Address</th>
-                        <th>Status</th>
-                        <th>Added</th>
-                    </tr>
+                    <tr><th>ID</th><th>Device</th><th>IP Address</th><th>Status</th><th>Added</th></tr>
                 </thead>
                 <tbody id="devicesTableBody">
-                    <tr>
-                        <td colspan="5" style="text-align:center;color:var(--text-muted);">Loading devices...</td>
-                    </tr>
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Loading devices...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -345,6 +325,24 @@
         </div>
     </div>
 
+    <!-- ===== ADD DEVICE MODAL ===== -->
+    <div id="addDeviceModal" class="modal">
+        <div class="modal-content">
+            <h2>➕ Add Device</h2>
+            <form id="addDeviceForm">
+                <label>Device Name</label>
+                <input type="text" id="deviceName" placeholder="e.g., Google DNS" required>
+                <label>IP Address</label>
+                <input type="text" id="deviceIP" placeholder="e.g., 8.8.8.8" required>
+                <button type="submit" class="btn-submit">Add Device</button>
+                <button type="button" class="btn-cancel" onclick="closeAddDevice()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ===== JAVASCRIPT ===== -->
+    <!-- ============================================ -->
     <script>
         // ==========================================
         // 1. FETCH DEVICES
@@ -357,14 +355,14 @@
                 document.getElementById('deviceCount').textContent = data.length + ' devices';
 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No devices found. Run Auto-Discovery to find devices!</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No devices found. Add a device!</td></tr>';
                     return;
                 }
 
                 let html = '';
                 data.forEach(d => {
                     const status = d.status || 'active';
-                    const statusClass = status === 'active' ? 'online' : status === 'discovered' ? 'discovered' : 'offline';
+                    const statusClass = status === 'active' ? 'online' : 'offline';
                     const added = new Date(d.created_at || Date.now()).toLocaleString();
                     html += `<tr>
                         <td>${d.id}</td>
@@ -383,64 +381,55 @@
         }
 
         // ==========================================
-        // 2. AUTO DISCOVERY
+        // 2. ADD DEVICE FUNCTIONS
         // ==========================================
-        async function startDiscovery() {
-            const btn = document.getElementById('discoverBtn');
-            const status = document.getElementById('discoverStatus');
+        function showAddDevice() {
+            document.getElementById('addDeviceModal').style.display = 'flex';
+        }
 
-            // Disable button and show loading
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Scanning...';
-            status.textContent = '🔍 Scanning network for devices...';
-            status.className = 'status-message info';
+        function closeAddDevice() {
+            document.getElementById('addDeviceModal').style.display = 'none';
+        }
 
-            try {
-                const res = await fetch('/api/discover');
-                const data = await res.json();
+        document.getElementById('addDeviceForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
 
-                if (data.success) {
-                    if (data.count > 0) {
-                        status.textContent = `✅ Discovered ${data.count} new device(s)! Refreshing...`;
-                        status.className = 'status-message success';
+            const name = document.getElementById('deviceName').value.trim();
+            const ip = document.getElementById('deviceIP').value.trim();
 
-                        // Update the device table directly
-                        await fetchDevices();
-
-                        // Show a quick list of discovered devices
-                        let msg = '✅ Discovered: ';
-                        data.discovered.forEach((d, i) => {
-                            msg += `${d.name} (${d.ip})`;
-                            if (i < data.discovered.length - 1) msg += ', ';
-                        });
-                        status.textContent = msg;
-                        status.className = 'status-message success';
-                    } else {
-                        status.textContent = '✅ No new devices found. All devices already monitored.';
-                        status.className = 'status-message success';
-                    }
-                } else {
-                    status.textContent = `❌ Error: ${data.error || 'Unknown error'}`;
-                    status.className = 'status-message error';
-                }
-            } catch (e) {
-                console.error('Discovery error:', e);
-                status.textContent = '❌ Error scanning network. Make sure Flask is running.';
-                status.className = 'status-message error';
+            if (!name || !ip) {
+                alert('❌ Please enter both name and IP address');
+                return;
             }
 
-            // Reset button
-            btn.disabled = false;
-            btn.innerHTML = '🔍 Auto-Discover Devices';
+            try {
+                const res = await fetch('/api/devices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, ip })
+                });
 
-            // Auto-hide status after 10 seconds
-            setTimeout(() => {
-                if (status.textContent.includes('✅') && !status.textContent.includes('Refreshing')) {
-                    status.textContent = '';
-                    status.className = 'status-message';
+                if (res.ok) {
+                    alert('✅ Device added successfully!');
+                    closeAddDevice();
+                    document.getElementById('addDeviceForm').reset();
+                    fetchDevices();
+                } else {
+                    alert('❌ Failed to add device. Please try again.');
                 }
-            }, 10000);
-        }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Error adding device');
+            }
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addDeviceModal');
+            if (event.target === modal) {
+                closeAddDevice();
+            }
+        };
 
         // ==========================================
         // 3. REFRESH
