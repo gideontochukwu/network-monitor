@@ -143,6 +143,13 @@ def signup():
     
     return render_template('signup.html')
 
+@app.route('/dns')
+def dns_page():
+    """DNS/Applications page"""
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return render_template('dns.html')
+
 # ==================== API Routes ====================
 
 @app.route('/api/ping-data')
@@ -185,7 +192,7 @@ def get_ping_data():
     
     return jsonify(data)
 
-@app.route('/api/devices')
+@app.route('/api/devices', methods=['GET'])
 def get_devices():
     """Get all monitored devices"""
     if 'user' not in session:
@@ -193,6 +200,22 @@ def get_devices():
     
     devices = db.get_all_devices()
     return jsonify(devices)
+
+@app.route('/api/devices', methods=['POST'])
+def add_device():
+    """Add a new device"""
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json
+    name = data.get('name')
+    ip = data.get('ip')
+    
+    if not name or not ip:
+        return jsonify({'error': 'Name and IP are required'}), 400
+    
+    device_id = db.add_device(name, ip)
+    return jsonify({'success': True, 'id': device_id})
 
 @app.route('/api/status')
 def get_status():
@@ -271,6 +294,7 @@ def get_anomalies():
         return jsonify({'error': 'Unauthorized'}), 401
     
     detector = AnomalyDetector()
+    detector.train_model()
     
     anomalies = detector.detect_anomalies(device_id=None)
     
@@ -339,29 +363,6 @@ def get_system_metrics():
         'net_recv_history': [{'value': row[0], 'timestamp': row[1]} for row in net_recv_hist[::-1]]
     })
 
-# ==================== Auto Discovery Route ====================
-
-@app.route('/api/discover')
-def discover_devices():
-    """Auto-discover new devices (auto-detects network)"""
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    try:
-        from discovery import AutoDiscovery
-        discovery = AutoDiscovery()
-        discovered = discovery.scan_network(timeout=0.5)
-        return jsonify({
-            'success': True,
-            'discovered': discovered,
-            'count': len(discovered),
-            'network': discovery.get_my_network()
-        })
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 @app.route('/api/dns-logs')
 def get_dns_logs():
     """Get recent DNS logs"""
@@ -403,28 +404,28 @@ def get_dns_stats():
     stats = [{'domain': row[0], 'count': row[1]} for row in rows]
     return jsonify(stats)
 
-@app.route('/dns')
-def dns_page():
-    """DNS/Applications page"""
-    if 'user' not in session:
-        return redirect(url_for('login'))
-    return render_template('dns.html')
+# ==================== Auto Discovery Route ====================
 
-@app.route('/api/devices', methods=['POST'])
-def add_device():
-    """Add a new device"""
+@app.route('/api/discover')
+def discover_devices():
+    """Auto-discover new devices (auto-detects network)"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    data = request.json
-    name = data.get('name')
-    ip = data.get('ip')
-    
-    if not name or not ip:
-        return jsonify({'error': 'Name and IP are required'}), 400
-    
-    device_id = db.add_device(name, ip)
-    return jsonify({'success': True, 'id': device_id})
+    try:
+        from discovery import AutoDiscovery
+        discovery = AutoDiscovery()
+        discovered = discovery.scan_network(timeout=0.5)
+        return jsonify({
+            'success': True,
+            'discovered': discovered,
+            'count': len(discovered),
+            'network': discovery.get_my_network()
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ==================== Main ====================
 
