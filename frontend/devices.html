@@ -140,7 +140,8 @@
         .device-table-wrapper .section-header .right {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .btn-primary {
@@ -157,6 +158,26 @@
         .btn-primary:hover {
             background: #27ae60;
             transform: translateY(-1px);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .btn-secondary:hover {
+            border-color: var(--accent-green);
+            color: var(--text-primary);
         }
 
         table {
@@ -271,6 +292,16 @@
             border-color: var(--accent-red);
             color: var(--accent-red);
         }
+
+        .status-message {
+            font-size: 13px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        .status-message.success { color: var(--accent-green); }
+        .status-message.error { color: var(--accent-red); }
+        .status-message.info { color: #f39c12; }
     </style>
 </head>
 <body>
@@ -299,6 +330,17 @@
             <div class="user-info">
                 <span class="user-name">👤 <strong>Admin</strong></span>
                 <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <!-- ===== DISCOVERY SECTION ===== -->
+        <div style="background: var(--bg-card); border-radius: 12px; padding: 18px 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <button class="btn-primary" id="discoverBtn" onclick="startDiscovery()">🔍 Auto-Discover Devices</button>
+                <span style="color: var(--text-muted); font-size: 13px;">Scans your network and automatically adds new devices</span>
+            </div>
+            <div>
+                <span id="discoverStatus" class="status-message"></span>
             </div>
         </div>
 
@@ -381,7 +423,58 @@
         }
 
         // ==========================================
-        // 2. ADD DEVICE FUNCTIONS
+        // 2. AUTO DISCOVERY
+        // ==========================================
+        async function startDiscovery() {
+            const btn = document.getElementById('discoverBtn');
+            const status = document.getElementById('discoverStatus');
+
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Scanning...';
+            status.textContent = '🔍 Scanning network for devices...';
+            status.className = 'status-message info';
+
+            try {
+                const res = await fetch('/api/discover');
+                const data = await res.json();
+
+                if (data.success) {
+                    if (data.count > 0) {
+                        let msg = '✅ Discovered: ';
+                        data.discovered.forEach((d, i) => {
+                            msg += `${d.name} (${d.ip})`;
+                            if (i < data.discovered.length - 1) msg += ', ';
+                        });
+                        status.textContent = msg;
+                        status.className = 'status-message success';
+                        await fetchDevices();
+                    } else {
+                        status.textContent = '✅ No new devices found. All devices already monitored.';
+                        status.className = 'status-message success';
+                    }
+                } else {
+                    status.textContent = `❌ Error: ${data.error || 'Unknown error'}`;
+                    status.className = 'status-message error';
+                }
+            } catch (e) {
+                console.error('Discovery error:', e);
+                status.textContent = '❌ Error scanning network. Make sure Flask is running.';
+                status.className = 'status-message error';
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '🔍 Auto-Discover Devices';
+
+            setTimeout(() => {
+                if (status.textContent.includes('✅') && !status.textContent.includes('Refreshing')) {
+                    status.textContent = '';
+                    status.className = 'status-message';
+                }
+            }, 10000);
+        }
+
+        // ==========================================
+        // 3. ADD DEVICE FUNCTIONS
         // ==========================================
         function showAddDevice() {
             document.getElementById('addDeviceModal').style.display = 'flex';
@@ -432,7 +525,7 @@
         };
 
         // ==========================================
-        // 3. REFRESH
+        // 4. REFRESH
         // ==========================================
         function refreshAll() {
             document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
@@ -440,7 +533,7 @@
         }
 
         // ==========================================
-        // 4. START
+        // 5. START
         // ==========================================
         refreshAll();
         setInterval(refreshAll, 10000);
