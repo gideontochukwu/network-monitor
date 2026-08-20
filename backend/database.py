@@ -11,11 +11,7 @@ class Database:
     def __init__(self, db_path="data/network_monitor.db"):
         """Initialize the database"""
         self.db_path = db_path
-        
-        # Create data folder if it doesn't exist
         os.makedirs("data", exist_ok=True)
-        
-        # Create tables
         self.create_tables()
         print(f"✅ Database initialized at: {db_path}")
     
@@ -28,7 +24,7 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # ===== DEVICES TABLE =====
+        # Devices table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS devices (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +34,7 @@ class Database:
             )
         ''')
         
-        # ===== PING METRICS TABLE =====
+        # Ping metrics table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS ping_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,7 +46,19 @@ class Database:
             )
         ''')
         
-        # ===== SYSTEM METRICS TABLE =====
+        # Metrics table (bandwidth, packet loss)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                device_id INTEGER NOT NULL,
+                metric_type TEXT NOT NULL,
+                metric_value REAL NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (device_id) REFERENCES devices(id)
+            )
+        ''')
+        
+        # System Metrics table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +70,16 @@ class Database:
             )
         ''')
         
-        # ===== ANOMALIES TABLE =====
+        # DNS Logs table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS dns_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain TEXT NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Anomalies table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS anomalies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +91,7 @@ class Database:
             )
         ''')
         
-        # ===== ALERTS TABLE =====
+        # Alerts table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS alerts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +104,7 @@ class Database:
             )
         ''')
         
-        # ===== USERS TABLE =====
+        # Users table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,6 +164,20 @@ class Database:
         conn.close()
         print(f"   💾 Saved ping: {latency_ms}ms (Status: {status})")
     
+    # ===== METRICS METHODS =====
+    
+    def save_metric(self, device_id, metric_type, value):
+        """Save a metric (bandwidth, packet loss, etc.)"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO metrics (device_id, metric_type, metric_value, timestamp)
+            VALUES (?, ?, ?, datetime('now'))
+        ''', (device_id, metric_type, value))
+        conn.commit()
+        conn.close()
+        print(f"   💾 Saved {metric_type}: {value}")
+    
     # ===== SYSTEM METRICS METHODS =====
     
     def save_system_metric(self, device_id, metric_type, value):
@@ -160,6 +191,48 @@ class Database:
         conn.commit()
         conn.close()
         print(f"   💾 Saved {metric_type}: {value}")
+    
+    # ===== DNS LOGS METHODS =====
+    
+    def save_dns_log(self, domain):
+        """Save a DNS request"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO dns_logs (domain, timestamp)
+            VALUES (?, datetime('now'))
+        ''', (domain,))
+        conn.commit()
+        conn.close()
+    
+    def get_dns_logs(self, limit=50):
+        """Get recent DNS logs"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT domain, timestamp
+            FROM dns_logs
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [{'domain': row[0], 'timestamp': row[1]} for row in rows]
+    
+    def get_dns_stats(self, limit=20):
+        """Get DNS statistics (most visited domains)"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT domain, COUNT(*) as count
+            FROM dns_logs
+            GROUP BY domain
+            ORDER BY count DESC
+            LIMIT ?
+        ''', (limit,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [{'domain': row[0], 'count': row[1]} for row in rows]
     
     # ===== USER METHODS =====
     
@@ -323,59 +396,3 @@ class Database:
         ''', (alert_id,))
         conn.commit()
         conn.close()
-    
-    # ===== STATUS METHODS =====
-    
-    def get_latest_status(self):
-        """Get the latest status for all devices"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT d.id, d.name, d.ip_address,
-                   p.latency_ms, p.status, p.timestamp
-            FROM devices d
-            LEFT JOIN ping_metrics p ON d.id = p.device_id
-            WHERE p.timestamp = (
-                SELECT MAX(timestamp)
-                FROM ping_metrics
-                WHERE device_id = d.id
-            )
-        ''')
-        rows = cursor.fetchall()
-        conn.close()
-        status = []
-        for row in rows:
-            status.append({
-                'id': row[0],
-                'name': row[1],
-                'ip': row[2],
-                'latency': row[3],
-                'status': row[4],
-                'timestamp': row[5]
-            })
-        return status
-
-# ==================== TEST ====================
-
-if __name__ == "__main__":
-    print("=" * 50)
-    print("📊 DATABASE TEST")
-    print("=" * 50)
-    
-    db = Database()
-    
-    # Check if devices exist
-    devices = db.get_all_devices()
-    if not devices:
-        print("⚠️ No devices found. Adding test devices...")
-        db.add_device("Google DNS", "8.8.8.8")
-        db.add_device("Cloudflare DNS", "1.1.1.1")
-    
-    # Show all devices
-    devices = db.get_all_devices()
-    print("\n📡 Devices in database:")
-    for d in devices:
-        print(f"   {d['name']} ({d['ip']})")
-    
-    print("\n✅ Database test complete!")
-    print("=" * 50)
