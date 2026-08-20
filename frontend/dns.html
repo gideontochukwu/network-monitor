@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications - Network Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e0a;
+            --bg-secondary: #111a14;
+            --bg-card: #111a14;
+            --border-color: #1a2a1a;
+            --text-primary: #d0f0d0;
+            --text-secondary: #6f9f6f;
+            --text-muted: #3a5a3a;
+            --sidebar-bg: #0d140d;
+            --sidebar-border: #1a2a1a;
+            --shadow: 0 4px 20px rgba(0,0,0,0.5);
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --accent-orange: #f39c12;
+            --accent-blue: #3498db;
+            --glow: rgba(46, 204, 113, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        .sidebar {
+            width: 230px;
+            background: var(--sidebar-bg);
+            padding: 25px 0;
+            flex-shrink: 0;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid var(--sidebar-border);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar .logo {
+            font-size: 22px;
+            font-weight: 700;
+            padding: 0 20px 30px 20px;
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .sidebar .logo span { color: var(--accent-green); }
+        .sidebar .logo .sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 3px;
+            display: block;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 22px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+        }
+        .sidebar .nav-item:hover, .sidebar .nav-item.active {
+            background: var(--glow);
+            color: var(--text-primary);
+            border-left-color: var(--accent-green);
+        }
+        .sidebar .nav-item .icon { margin-right: 14px; font-size: 18px; width: 24px; text-align: center; }
+        .sidebar .nav-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border-color), transparent);
+            margin: 15px 20px;
+        }
+        .sidebar .nav-item.logout { color: var(--accent-red); }
+        .sidebar .nav-item.logout:hover {
+            background: rgba(231, 76, 60, 0.12);
+            border-left-color: var(--accent-red);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px 30px 30px 30px;
+            overflow-y: auto;
+            background: radial-gradient(ellipse at top, var(--bg-secondary), var(--bg-primary));
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .top-header h1 { color: var(--text-primary); font-size: 24px; font-weight: 600; }
+        .top-header h1 small { font-size: 14px; font-weight: 400; color: var(--text-muted); margin-left: 10px; }
+        .top-header .user-info { display: flex; align-items: center; gap: 16px; }
+        .top-header .user-info .user-name { color: var(--text-secondary); }
+        .top-header .user-info .user-name strong { color: var(--text-primary); }
+        .top-header .user-info .logout-btn { color: var(--accent-red); text-decoration: none; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            padding: 18px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .stat-card .number { font-size: 32px; font-weight: 700; color: var(--text-primary); }
+        .stat-card .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .stat-card .number.green { color: var(--accent-green); }
+        .stat-card .number.orange { color: var(--accent-orange); }
+        .stat-card .number.blue { color: var(--accent-blue); }
+
+        .dns-table-wrapper {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+            margin-bottom: 25px;
+        }
+        .dns-table-wrapper .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .dns-table-wrapper .section-header h3 { color: var(--text-secondary); font-size: 16px; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            background: var(--bg-primary);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        tbody tr:hover { background: var(--glow); }
+
+        .refresh-footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 12px 0 4px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">
+            🌐 Network<span>Monitor</span>
+            <span class="sub">REAL-TIME DASHBOARD</span>
+        </div>
+        <a class="nav-item" href="/"><span class="icon">📊</span> Dashboard</a>
+        <a class="nav-item" href="/devices"><span class="icon">📡</span> Devices</a>
+        <a class="nav-item" href="/alerts"><span class="icon">🔔</span> Alerts</a>
+        <a class="nav-item" href="/analytics"><span class="icon">📈</span> Analytics</a>
+        <a class="nav-item active" href="/dns"><span class="icon">🌐</span> Applications</a>
+        <div class="nav-divider"></div>
+        <a class="nav-item" href="/settings"><span class="icon">⚙️</span> Settings</a>
+        <a class="nav-item logout" href="/logout"><span class="icon">🚪</span> Logout</a>
+    </div>
+
+    <div class="main-content">
+
+        <div class="top-header">
+            <h1>🌐 Applications <small>domains visited by devices</small></h1>
+            <div class="user-info">
+                <span class="user-name">👤 <strong>Admin</strong></span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="number green" id="totalRequests">0</div>
+                <div class="label">Total DNS Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="number blue" id="uniqueDomains">0</div>
+                <div class="label">Unique Domains</div>
+            </div>
+            <div class="stat-card">
+                <div class="number orange" id="topDomain">—</div>
+                <div class="label">Most Visited</div>
+            </div>
+        </div>
+
+        <div class="dns-table-wrapper">
+            <div class="section-header">
+                <h3>📋 Recent DNS Requests</h3>
+                <span class="device-count" id="logCount">0 logs</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Domain</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="dnsTableBody">
+                    <tr><td colspan="2" style="text-align:center;color:var(--text-muted);">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="refresh-footer">
+            🔄 Data refreshes automatically · Last updated: <span id="lastRefresh">--:--:--</span>
+        </div>
+    </div>
+
+    <script>
+        async function fetchDNSLogs() {
+            try {
+                const res = await fetch('/api/dns-logs');
+                const data = await res.json();
+                const tbody = document.getElementById('dnsTableBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:var(--text-muted);">No DNS requests logged yet.</td></tr>';
+                    document.getElementById('logCount').textContent = '0 logs';
+                    return;
+                }
+
+                let html = '';
+                data.forEach(log => {
+                    const time = new Date(log.timestamp).toLocaleString();
+                    html += `<tr>
+                        <td><strong style="color:var(--text-primary);">${log.domain}</strong></td>
+                        <td style="color:var(--text-muted);font-size:12px;">${time}</td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+                document.getElementById('logCount').textContent = data.length + ' logs';
+            } catch (e) {
+                console.error('DNS logs error:', e);
+            }
+        }
+
+        async function fetchDNSStats() {
+            try {
+                const res = await fetch('/api/dns-stats');
+                const data = await res.json();
+
+                if (data && data.length > 0) {
+                    let total = 0;
+                    data.forEach(item => total += item.count);
+                    document.getElementById('totalRequests').textContent = total;
+                    document.getElementById('uniqueDomains').textContent = data.length;
+                    document.getElementById('topDomain').textContent = data[0].domain;
+                }
+            } catch (e) {
+                console.error('DNS stats error:', e);
+            }
+        }
+
+        function refreshAll() {
+            document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString();
+            fetchDNSLogs();
+            fetchDNSStats();
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 10000);
+    </script>
+</body>
+</html>
