@@ -334,7 +334,7 @@ def get_dns_stats():
     stats = [{'domain': row[0], 'count': row[1]} for row in rows]
     return jsonify(stats)
 
-# ==================== HYBRID ARCHITECTURE INGEST ROUTE ====================
+# ==================== HYBRID ARCHITECTURE ROUTES ====================
 
 @app.route('/api/ingest', methods=['POST'])
 def ingest_data():
@@ -371,10 +371,10 @@ def ingest_data():
         
         return jsonify({'success': True, 'device_id': device_id})
     except Exception as e:
-        print(f"Error in ingest: {e}")
+        import traceback
+        error = traceback.format_exc()
+        print(f"Error in ingest: {error}")
         return jsonify({'error': str(e)}), 500
-
-# ==================== DNS INGEST ROUTE (for local DNS capture) ====================
 
 @app.route('/api/dns-ingest', methods=['POST'])
 def dns_ingest():
@@ -402,6 +402,23 @@ def dns_ingest():
         return jsonify({'success': True})
     except Exception as e:
         print(f"Error in dns_ingest: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ==================== DATABASE CHECK ROUTE ====================
+
+@app.route('/api/db-check')
+def db_check():
+    """Check database tables"""
+    if 'user' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    try:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT name FROM sqlite_master WHERE type="table"')
+        tables = cursor.fetchall()
+        conn.close()
+        return jsonify({'tables': [t[0] for t in tables]})
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 # ==================== Auto Discovery Route ====================
