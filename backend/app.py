@@ -404,6 +404,44 @@ def get_dns_stats():
     stats = [{'domain': row[0], 'count': row[1]} for row in rows]
     return jsonify(stats)
 
+@app.route('/api/ingest', methods=['POST'])
+def ingest_data():
+    """Receive data from local collector"""
+    try:
+        data = request.json
+        device_name = data.get('device_name')
+        ip = data.get('ip')
+        metrics = data.get('metrics', {})
+        
+        if not device_name or not ip:
+            return jsonify({'error': 'Missing device name or IP'}), 400
+        
+        # Check if device already exists
+        devices = db.get_all_devices()
+        existing_device = next((d for d in devices if d['ip'] == ip), None)
+        
+        if existing_device:
+            device_id = existing_device['id']
+        else:
+            device_id = db.add_device(device_name, ip)
+        
+        # Save ping metrics
+        if 'latency' in metrics and metrics['latency'] is not None:
+            db.save_ping_result(device_id, metrics['latency'], metrics.get('status', 'success'))
+        
+        # Save system metrics (if provided)
+        if 'cpu' in metrics:
+            db.save_system_metric(device_id, 'cpu', metrics['cpu'])
+        if 'memory' in metrics:
+            db.save_system_metric(device_id, 'memory', metrics['memory'])
+        if 'disk' in metrics:
+            db.save_system_metric(device_id, 'disk', metrics['disk'])
+        
+        return jsonify({'success': True, 'device_id': device_id})
+    except Exception as e:
+        print(f"Error in ingest: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 # ==================== Auto Discovery Route ====================
 
 @app.route('/api/discover')
