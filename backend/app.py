@@ -368,7 +368,7 @@ def ingest_data():
             db.save_system_metric(device_id, 'memory', metrics['memory'])
         if 'disk' in metrics and metrics['disk'] is not None:
             db.save_system_metric(device_id, 'disk', metrics['disk'])
-            
+
         return jsonify({'success': True, 'device_id': device_id})
     except Exception as e:
         import traceback
@@ -423,25 +423,31 @@ def db_check():
 
 # ==================== Auto Discovery Route ====================
 
-@app.route('/api/discover')
-def discover_devices():
-    """Auto-discover new devices (auto-detects network)"""
+@app.route('/api/discover', methods=['POST'])
+def discover_device():
+    """Receive discovered device from local agent"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
+    
     try:
-        from discovery import AutoDiscovery
-        discovery = AutoDiscovery()
-        discovered = discovery.scan_network(timeout=0.5)
-        return jsonify({
-            'success': True,
-            'discovered': discovered,
-            'count': len(discovered),
-            'network': discovery.get_my_network()
-        })
+        data = request.json
+        ip = data.get('ip')
+        name = data.get('name')
+        
+        if not ip:
+            return jsonify({'error': 'Missing IP'}), 400
+        
+        # Check if device already exists
+        devices = db.get_all_devices()
+        existing = next((d for d in devices if d['ip'] == ip), None)
+        
+        if existing:
+            return jsonify({'success': True, 'message': 'Device already exists'})
+        
+        device_id = db.add_device(name, ip)
+        return jsonify({'success': True, 'device_id': device_id})
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 500    
 
 # ==================== Main ====================
 
