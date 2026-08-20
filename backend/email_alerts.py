@@ -15,7 +15,7 @@ class EmailAlert:
         # Use environment variables or hardcode for testing
         self.email = email or os.environ.get('EMAIL_USER', 'gideonjoshua2004@gmail.com')
         self.password = password or os.environ.get('EMAIL_PASSWORD', 'wwxd fufu rxay przd')
-        self.recipient = os.environ.get('EMAIL_RECIPIENT', 'your_email@gmail.com')
+        self.recipient = os.environ.get('EMAIL_RECIPIENT', 'gideonjoshua2004@gmail.com')
     
     def send_alert(self, device_name, latency, timestamp):
         """
