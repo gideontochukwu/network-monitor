@@ -361,14 +361,14 @@ def ingest_data():
         if 'latency' in metrics and metrics['latency'] is not None:
             db.save_ping_result(device_id, metrics['latency'], metrics.get('status', 'success'))
         
-        # Save system metrics (if provided)
-        if 'cpu' in metrics:
+        # Save system metrics (if provided and not None)
+        if 'cpu' in metrics and metrics['cpu'] is not None:
             db.save_system_metric(device_id, 'cpu', metrics['cpu'])
-        if 'memory' in metrics:
+        if 'memory' in metrics and metrics['memory'] is not None:
             db.save_system_metric(device_id, 'memory', metrics['memory'])
-        if 'disk' in metrics:
+        if 'disk' in metrics and metrics['disk'] is not None:
             db.save_system_metric(device_id, 'disk', metrics['disk'])
-        
+            
         return jsonify({'success': True, 'device_id': device_id})
     except Exception as e:
         import traceback
