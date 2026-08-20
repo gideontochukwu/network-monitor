@@ -9,6 +9,7 @@ import os
 import sys
 import secrets
 import hashlib
+from datetime import datetime
 
 # Add the backend folder to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -21,14 +22,13 @@ app = Flask(__name__,
             template_folder='../frontend',
             static_folder='../frontend')
 
-# Secret key for session management (required for login)
+# Secret key for session management
 app.secret_key = secrets.token_hex(16)
 
 db = Database()
 
 # ==================== Authentication ====================
 
-# Simple user database (fallback if no database)
 USERS = {
     'admin': 'admin123',
     'viewer': 'viewer123'
@@ -42,7 +42,6 @@ def authenticate(username, password):
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         if password_hash == user['password_hash']:
             return True
-    
     # Fallback to hardcoded users
     if username in USERS and USERS[username] == password:
         return True
@@ -116,24 +115,17 @@ def signup():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
-        # Validation
         if not username or not password:
             return render_template('signup.html', error='Username and password are required')
-        
         if password != confirm_password:
             return render_template('signup.html', error='Passwords do not match')
-        
         if len(password) < 4:
             return render_template('signup.html', error='Password must be at least 4 characters')
         
-        # Check if user already exists
         if db.user_exists(username):
             return render_template('signup.html', error='Username already taken')
         
-        # Hash the password
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # Add user to database
         user_id = db.add_user(username, password_hash)
         
         if user_id:
@@ -160,17 +152,13 @@ def get_ping_data():
     
     conn = db.get_connection()
     cursor = conn.cursor()
-    
-    # Get the first available device ID
     cursor.execute('SELECT id FROM devices LIMIT 1')
     device_row = cursor.fetchone()
-    
     if not device_row:
         conn.close()
         return jsonify([])
     
     device_id = device_row[0]
-    
     cursor.execute('''
         SELECT latency_ms, status, timestamp 
         FROM ping_metrics 
@@ -178,18 +166,10 @@ def get_ping_data():
         ORDER BY timestamp DESC 
         LIMIT 20
     ''', (device_id,))
-    
     rows = cursor.fetchall()
     conn.close()
     
-    data = []
-    for row in rows:
-        data.append({
-            'latency': row[0],
-            'status': row[1],
-            'timestamp': row[2]
-        })
-    
+    data = [{'latency': row[0], 'status': row[1], 'timestamp': row[2]} for row in rows]
     return jsonify(data)
 
 @app.route('/api/devices', methods=['GET'])
@@ -197,7 +177,6 @@ def get_devices():
     """Get all monitored devices"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     devices = db.get_all_devices()
     return jsonify(devices)
 
@@ -206,14 +185,11 @@ def add_device():
     """Add a new device"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     data = request.json
     name = data.get('name')
     ip = data.get('ip')
-    
     if not name or not ip:
         return jsonify({'error': 'Name and IP are required'}), 400
-    
     device_id = db.add_device(name, ip)
     return jsonify({'success': True, 'id': device_id})
 
@@ -222,34 +198,17 @@ def get_status():
     """Get overall network status"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     conn = db.get_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
         SELECT d.name, d.ip_address, p.latency_ms, p.status, p.timestamp
         FROM ping_metrics p
         JOIN devices d ON p.device_id = d.id
-        WHERE p.id IN (
-            SELECT MAX(id) 
-            FROM ping_metrics 
-            GROUP BY device_id
-        )
+        WHERE p.id IN (SELECT MAX(id) FROM ping_metrics GROUP BY device_id)
     ''')
-    
     rows = cursor.fetchall()
     conn.close()
-    
-    status = []
-    for row in rows:
-        status.append({
-            'device': row[0],
-            'ip': row[1],
-            'latency': row[2],
-            'status': row[3],
-            'timestamp': row[4]
-        })
-    
+    status = [{'device': row[0], 'ip': row[1], 'latency': row[2], 'status': row[3], 'timestamp': row[4]} for row in rows]
     return jsonify(status)
 
 @app.route('/api/alerts')
@@ -257,34 +216,19 @@ def get_alerts():
     """Get all alerts"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     conn = db.get_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
-        SELECT a.id, a.message, a.severity, a.status, a.created_at,
-               d.name as device_name
+        SELECT a.id, a.message, a.severity, a.status, a.created_at, d.name as device_name
         FROM alerts a
         JOIN anomalies an ON a.anomaly_id = an.id
         JOIN devices d ON an.device_id = d.id
         ORDER BY a.created_at DESC
         LIMIT 50
     ''')
-    
     rows = cursor.fetchall()
     conn.close()
-    
-    alerts = []
-    for row in rows:
-        alerts.append({
-            'id': row[0],
-            'message': row[1],
-            'severity': row[2],
-            'status': row[3],
-            'created_at': row[4],
-            'device_name': row[5]
-        })
-    
+    alerts = [{'id': row[0], 'message': row[1], 'severity': row[2], 'status': row[3], 'created_at': row[4], 'device_name': row[5]} for row in rows]
     return jsonify(alerts)
 
 @app.route('/api/anomalies')
@@ -292,12 +236,9 @@ def get_anomalies():
     """Get recent anomalies for all devices"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     detector = AnomalyDetector()
     detector.train_model()
-    
     anomalies = detector.detect_anomalies(device_id=None)
-    
     if anomalies:
         conn = db.get_connection()
         cursor = conn.cursor()
@@ -306,7 +247,6 @@ def get_anomalies():
             row = cursor.fetchone()
             anomaly['device_name'] = row[0] if row else f"Device {anomaly['device_id']}"
         conn.close()
-    
     return jsonify(anomalies)
 
 @app.route('/api/system-metrics')
@@ -314,11 +254,8 @@ def get_system_metrics():
     """Get system metrics (CPU, Memory, Disk)"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     conn = db.get_connection()
     cursor = conn.cursor()
-    
-    # Latest values
     cursor.execute('SELECT metric_value FROM system_metrics WHERE metric_type = "cpu" ORDER BY timestamp DESC LIMIT 1')
     cpu_row = cursor.fetchone()
     cursor.execute('SELECT metric_value FROM system_metrics WHERE metric_type = "memory" ORDER BY timestamp DESC LIMIT 1')
@@ -333,7 +270,6 @@ def get_system_metrics():
     net_sent_row = cursor.fetchone()
     cursor.execute('SELECT metric_value FROM system_metrics WHERE metric_type = "net_recv" ORDER BY timestamp DESC LIMIT 1')
     net_recv_row = cursor.fetchone()
-    
     # Histories
     cursor.execute('SELECT metric_value, timestamp FROM system_metrics WHERE metric_type = "cpu" ORDER BY timestamp DESC LIMIT 20')
     cpu_hist = cursor.fetchall()
@@ -345,9 +281,7 @@ def get_system_metrics():
     net_sent_hist = cursor.fetchall()
     cursor.execute('SELECT metric_value, timestamp FROM system_metrics WHERE metric_type = "net_recv" ORDER BY timestamp DESC LIMIT 20')
     net_recv_hist = cursor.fetchall()
-    
     conn.close()
-    
     return jsonify({
         'cpu': cpu_row[0] if cpu_row else None,
         'memory': mem_row[0] if mem_row else None,
@@ -368,7 +302,6 @@ def get_dns_logs():
     """Get recent DNS logs"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     conn = db.get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -379,7 +312,6 @@ def get_dns_logs():
     ''')
     rows = cursor.fetchall()
     conn.close()
-    
     logs = [{'domain': row[0], 'timestamp': row[1]} for row in rows]
     return jsonify(logs)
 
@@ -388,7 +320,6 @@ def get_dns_stats():
     """Get DNS statistics (most visited domains)"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     conn = db.get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -400,9 +331,10 @@ def get_dns_stats():
     ''')
     rows = cursor.fetchall()
     conn.close()
-    
     stats = [{'domain': row[0], 'count': row[1]} for row in rows]
     return jsonify(stats)
+
+# ==================== HYBRID ARCHITECTURE INGEST ROUTE ====================
 
 @app.route('/api/ingest', methods=['POST'])
 def ingest_data():
@@ -441,7 +373,37 @@ def ingest_data():
     except Exception as e:
         print(f"Error in ingest: {e}")
         return jsonify({'error': str(e)}), 500
-    
+
+# ==================== DNS INGEST ROUTE (for local DNS capture) ====================
+
+@app.route('/api/dns-ingest', methods=['POST'])
+def dns_ingest():
+    """Receive DNS logs from local sender"""
+    try:
+        data = request.json
+        domain = data.get('domain')
+        timestamp = data.get('timestamp')
+        
+        if not domain:
+            return jsonify({'error': 'Missing domain'}), 400
+        
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        if timestamp:
+            dt = datetime.fromtimestamp(timestamp)
+        else:
+            dt = datetime.now()
+        cursor.execute('''
+            INSERT INTO dns_logs (domain, timestamp)
+            VALUES (?, ?)
+        ''', (domain, dt))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error in dns_ingest: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # ==================== Auto Discovery Route ====================
 
 @app.route('/api/discover')
@@ -449,7 +411,6 @@ def discover_devices():
     """Auto-discover new devices (auto-detects network)"""
     if 'user' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
-    
     try:
         from discovery import AutoDiscovery
         discovery = AutoDiscovery()
@@ -468,7 +429,6 @@ def discover_devices():
 # ==================== Main ====================
 
 if __name__ == '__main__':
-    # Render uses PORT environment variable
     port = int(os.environ.get('PORT', 5000))
     print("=" * 60)
     print("🌐 NETWORK MONITORING SYSTEM WITH AI")
