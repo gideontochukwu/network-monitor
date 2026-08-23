@@ -425,10 +425,7 @@ def db_check():
 
 @app.route('/api/discover', methods=['POST'])
 def discover_device():
-    """Receive discovered device from local agent"""
-    if 'user' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+    """Receive discovered device from local agent (no auth required)"""
     try:
         data = request.json
         ip = data.get('ip')
@@ -436,6 +433,9 @@ def discover_device():
         
         if not ip:
             return jsonify({'error': 'Missing IP'}), 400
+        
+        from database import Database
+        db = Database()
         
         # Check if device already exists
         devices = db.get_all_devices()
@@ -445,8 +445,10 @@ def discover_device():
             return jsonify({'success': True, 'message': 'Device already exists'})
         
         device_id = db.add_device(name, ip)
+        print(f"✅ Auto-discovered device: {name} ({ip})")
         return jsonify({'success': True, 'device_id': device_id})
     except Exception as e:
+        print(f"❌ Error in discover: {e}")
         return jsonify({'error': str(e)}), 500    
 
 # ==================== Main ====================
